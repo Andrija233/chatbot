@@ -7,12 +7,14 @@ const openai = new OpenAI({
 
 export class AssistantOpenAI {
     #model
-    constructor(model="gpt-4o-mini") {
-        this.#model = model
+    #client
+    constructor(model="gpt-4o-mini", client = openai) {
+      this.#model = model
+      this.#client = client
     }
     async chat(content, history) {
         try {
-            const result = await openai.chat.completions.create({
+            const result = await this.#client.chat.completions.create({
                 model: this.#model,
                 messages: [...history, { role: "user", content }]
             })
@@ -21,5 +23,20 @@ export class AssistantOpenAI {
             console.log(error);
         }
     }
+    async *chatStream(content, history) {
+        try {
+          const result = await this.#client.chat.completions.create({
+            model: this.#model,
+            messages: [...history, { role: "user", content }],
+            stream: true,
+          });
+    
+          for await (const chunk of result) {
+            yield chunk.choices[0]?.delta?.content || "";
+          }
+        } catch (error) {
+          console.log(error);
+        }
+      }
 }
 

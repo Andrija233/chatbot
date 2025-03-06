@@ -12,7 +12,11 @@ const Chat = ({messages}) => {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage?.role === "user") {
+      scrollToBottom();
+    }
+    //scrollToBottom();
   }, [messages]);
   return (
     <div className="relative flex flex-col gap-3 h-full p-4 overflow-y-auto bg-gray-100">

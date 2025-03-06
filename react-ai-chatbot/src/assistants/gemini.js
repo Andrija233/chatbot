@@ -22,4 +22,16 @@ export class AssistantGemini {
       console.log(error);
     }
   }
+
+  async *chatStream(content){
+    try {
+      const result = await this.#chat.sendMessageStream(content);
+      for await (const chunk of result.stream){
+        // just like return, but it returns a generator with next method and can be iterated
+        yield chunk.text();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }

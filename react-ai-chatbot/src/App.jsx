@@ -5,29 +5,45 @@ import { AssistantOpenAI } from "./assistants/openai.js"
 import { MESSAGES } from "./components/constants.js"
 import Controls from "./components/Controls/Controls.jsx"
 import Loader from "./components/Loader/Loader.jsx"
-import { FunctionCallingMode } from "@google/generative-ai"
+import { AssistantDeepSeekAI } from "./assistants/deepseekai.js"
 
 
 
 const App = () => {
   const assistant = new AssistantGemini();
   const openai = new AssistantOpenAI();
+  const deepseekai = new AssistantDeepSeekAI();
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const updateLastMessage = (content) => {
+    setMessages((prevMessages) => prevMessages.map((message, index) => index === prevMessages.length - 1 ? { ...message, content: `${message.content} ${content}` } : message));
+  };
 
   const handleContentSend = async (content) => {
     setMessages([...messages, { role: "user", content }]);
     setIsLoading(true);
     try{
-      const response = await assistant.chat(content);
-      setMessages([...messages, { role: "user", content }, { role: "assistant", content: response }]);
+      const response = assistant.chatStream(content);
+      let isFirstChunk = false;
+      for await (const chunk of response){
+        if(!isFirstChunk){
+          isFirstChunk = true;
+          setMessages((prevMessages) => [...prevMessages, { role: "assistant", content: "" }]);
+          setIsLoading(false);
+          setIsStreaming(true);
+        }
+
+        updateLastMessage(chunk);
+      }
+      setIsStreaming(false);
     }
     catch(error) 
     {
       setMessages([...messages, { role: "user", content }, { role: "assistant", content: "Something went wrong" }]);
-    }
-    finally{
       setIsLoading(false);
+      setIsStreaming(false);
     }
   };
   return (
@@ -40,7 +56,7 @@ const App = () => {
       <div className="flex-grow w-[100%] bg-teal-100 dark:bg-teal-900 rounded-2xl overflow-y-auto">
         <Chat messages={messages} />
       </div>
-      <Controls isDisabled={isLoading} onSend={handleContentSend}/>
+      <Controls isDisabled={isLoading || isStreaming} onSend={handleContentSend}/>
     </div>
   )
 }
